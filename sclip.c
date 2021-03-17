@@ -1,10 +1,80 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <string.h>
+#include <errno.h>
+#include <unistd.h>
+
+#include <jack/jack.h>
+
 #include "sclip.h"
-#include "thread.h"
 
-#define NUM_PORTS 2
+void initialize_buffer(unsigned int buffer_length_seconds)
+{
+  if (buffer_length_seconds < 1) {
+	printf("buffer time must be greater than 1 second\n");
+	exit(EXIT_FAILURE);
+  }
 
-jack_port_t *ports[NUM_PORTS];
-jack_client_t *client;
+  if (buffer_length_seconds > MAX_TIME) {
+	printf("buffer time must shorter than %d seconds\n", MAX_TIME);
+	exit(EXIT_FAILURE);
+  }
+
+  /* Calculate number of floats to store the desired number of seconds using the
+     sample rate from the JACK client in global variable. */
+  buffer_length_floats = buffer_length_seconds * jack_get_sample_rate(client);
+  audio_buffer = calloc(buffer_length_floats, sizeof(float));
+}
+
+/**
+ * The process callback for this JACK application is called in a
+ * special realtime thread once for each audio cycle.
+ *
+ * This client does nothing more than copy data from its input
+ * port to its output port. It will exit when stopped by 
+ * the user (e.g. using Ctrl-C on a unix-ish operating system)
+ */
+int process(jack_nframes_t nframes, void *arg) {
+  unsigned int i;
+  jack_default_audio_sample_t *in;
+	
+  /* just incase the port isn't registered yet */
+  if (ports[0] == NULL) {
+    return 0;
+  }
+
+  in = jack_port_get_buffer(ports[0], nframes);
+
+  if (!recording) {
+    for (i = 0; i < nframes; i++) {
+      audio_buffer[audio_buffer_index] = in[i];
+      audio_buffer_index = (audio_buffer_index + 1) % buffer_length_floats;
+    }  
+  }
+
+  return 0;      
+}
+
+void interface_loop()
+{
+  char inputBuffer[MAX_LINE];
+  ssize_t length = 1;
+
+  while (length > 0) {
+    printf("> ");
+    fflush(stdout);
+    
+    length = read(STDIN_FILENO, inputBuffer, MAX_LINE);
+
+    if (inputBuffer[0] == 'w') {
+      printf("Writing\n");
+      fflush(stdout);
+      recording = true;
+    }
+  }
+}
+
 
 int main(int argc, char *argv[]) {
   const char *client_name = "sclip";
@@ -36,6 +106,10 @@ int main(int argc, char *argv[]) {
     client_name = jack_get_client_name(client);
     fprintf(stderr, "unique name `%s' assigned\n", client_name);
   }
+
+  initialize_buffer(BUFFER_SECONDS);
+
+  printf("audio buffer: %p\n", audio_buffer);
 
   /* tell the JACK server to call `process()' whenever
      there is work to be done. */
@@ -71,19 +145,19 @@ int main(int argc, char *argv[]) {
    * process() callback will start running now. */
   if (jack_activate(client)) {
     fprintf (stderr, "cannot activate client");
-    exit (1);
+    exit(EXIT_FAILURE);
   }
 
   /* keep running until stopped by the user */
-
-  sleep (-1);
-
+  interface_loop();
+  
   /* this is never reached but if the program
      had some other way to exit besides being killed,
      they would be important to call. */
 
+  free(audio_buffer);
   jack_client_close (client);
-  exit (0);
+  exit(EXIT_SUCCESS);
 }
 
 /**
@@ -91,5 +165,6 @@ int main(int argc, char *argv[]) {
  * decides to disconnect the client.
  */
 void jack_shutdown(void *arg) {
+  free(audio_buffer);
   exit(EXIT_FAILURE);
 }

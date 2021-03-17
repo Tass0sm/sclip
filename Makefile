@@ -1,5 +1,5 @@
 TARGET = sclip
-SRC = sclip.c thread.c
+SRC = sclip.c
 OBJ = $(SRC:.c=.o)
 CFLAGS = -Wall -pedantic
 LDFLAGS = -l jack
