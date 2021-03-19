@@ -10,12 +10,13 @@ int process(jack_nframes_t nframes, void *arg);
 void initialize_buffer(unsigned int buffer_length_seconds);
 void interface_loop();
 void jack_shutdown(void *arg);
+void write_buffer();
 
 /* globals */
 jack_client_t *client;
 jack_port_t *ports[NUM_PORTS];
 
-bool recording = false;
+bool writing = false;
 float * audio_buffer = NULL;
 unsigned int audio_buffer_index = 0;
 unsigned int buffer_length_floats = 0;

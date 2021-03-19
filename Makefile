@@ -2,7 +2,7 @@ TARGET = sclip
 SRC = sclip.c
 OBJ = $(SRC:.c=.o)
 CFLAGS = -Wall -pedantic
-LDFLAGS = -l jack
+LDFLAGS = -ljack
 
 all: $(TARGET)
 

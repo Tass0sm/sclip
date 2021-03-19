@@ -9,6 +9,10 @@
 
 #include "sclip.h"
 
+#define ENCODE_BLOCK_SIZE (1152)
+int b_o_s = 1;
+long serialno;
+
 void initialize_buffer(unsigned int buffer_length_seconds)
 {
   if (buffer_length_seconds < 1) {
@@ -31,13 +35,13 @@ void initialize_buffer(unsigned int buffer_length_seconds)
  * The process callback for this JACK application is called in a
  * special realtime thread once for each audio cycle.
  *
- * This client does nothing more than copy data from its input
- * port to its output port. It will exit when stopped by 
- * the user (e.g. using Ctrl-C on a unix-ish operating system)
+ * This client copies data from its input port to a ring buffer. It will exit
+ * when stopped by the user (e.g. using Ctrl-C on a unix-ish operating system)
  */
-int process(jack_nframes_t nframes, void *arg) {
+int process(jack_nframes_t nframes, void *arg)
+{
   unsigned int i;
-  jack_default_audio_sample_t *in;
+  jack_default_audio_sample_t *in; /* this is a float pointer */
 	
   /* just incase the port isn't registered yet */
   if (ports[0] == NULL) {
@@ -46,9 +50,10 @@ int process(jack_nframes_t nframes, void *arg) {
 
   in = jack_port_get_buffer(ports[0], nframes);
 
-  if (!recording) {
+  if (!writing) {
     for (i = 0; i < nframes; i++) {
       audio_buffer[audio_buffer_index] = in[i];
+      /* might be better with a conditional rather than mod */
       audio_buffer_index = (audio_buffer_index + 1) % buffer_length_floats;
     }  
   }
@@ -70,13 +75,36 @@ void interface_loop()
     if (inputBuffer[0] == 'w') {
       printf("Writing\n");
       fflush(stdout);
-      recording = true;
+
+      write_buffer();
     }
   }
 }
 
+void write_buffer() {
+  FILE *file;
+  unsigned int i;
+  void * buffer_location;
 
-int main(int argc, char *argv[]) {
+  writing = true;
+
+  file = fopen("output.pcm", "w");
+
+  for (i = 0; i < buffer_length_floats; i++) {
+    buffer_location = audio_buffer + audio_buffer_index;
+    fwrite(buffer_location, sizeof(float), 1, file);
+
+    /* might be better with a conditional rather than mod */
+    audio_buffer_index = (audio_buffer_index + 1) % buffer_length_floats;
+  }
+
+  fclose(file);
+
+  writing = false;
+}
+
+int main(int argc, char *argv[])
+{
   const char *client_name = "sclip";
   const char *server_name = NULL;
   jack_options_t options = JackNullOption;
@@ -164,7 +192,8 @@ int main(int argc, char *argv[]) {
  * JACK calls this shutdown_callback if the server ever shuts down or
  * decides to disconnect the client.
  */
-void jack_shutdown(void *arg) {
+void jack_shutdown(void *arg)
+{
   free(audio_buffer);
   exit(EXIT_FAILURE);
 }
