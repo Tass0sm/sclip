@@ -1,5 +1,5 @@
 TARGET = sclip
-SRC = sclip.c
+SRC = main.c buffer.c
 OBJ = $(SRC:.c=.o)
 CFLAGS = -Wall -pedantic
 LDFLAGS = -ljack
@@ -7,10 +7,10 @@ LDFLAGS = -ljack
 all: $(TARGET)
 
 $(TARGET): $(OBJ)
-	$(CC) $(LDFLAGS) $(OBJ) -o $(TARGET)
+	$(CC) $(CFLAGS) $(LDFLAGS) $(OBJ) -o $(TARGET)
 
 %.o: %.c
-	$(CC) $(LDFLAGS) -Wall $< -c -o $@ 
+	$(CC) $(CFLAGS) $(LDFLAGS) -Wall $< -c -o $@ 
 
 clean:
 	rm -f $(OBJ) $(TARGET)
