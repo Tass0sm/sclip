@@ -3,9 +3,9 @@
 
 #define MAX_TIME 3600
 #define MAX_LINE 10
-#define NUM_PORTS 1
-#define PORT_NAME_LENGTH 8
-#define BUFFER_SECONDS 30
+#define NUM_PORTS 2
+#define PORT_NAME_LENGTH 32
+#define BUFFER_SECONDS 1
 
 /* main */
 int jack_process(jack_nframes_t nframes, void *arg);
@@ -19,7 +19,7 @@ void write_buffer();
 /* globals */
 extern jack_client_t *client;
 extern jack_port_t *ports[NUM_PORTS];
-extern float *audio_buffer[NUM_PORTS];
+extern float *audio_buffers[NUM_PORTS];
 extern unsigned int audio_buffer_index;
 extern unsigned int buffer_length_floats;
 extern bool writing;

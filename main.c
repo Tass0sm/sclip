@@ -11,7 +11,7 @@
 
 jack_client_t *client;
 jack_port_t *ports[NUM_PORTS];
-float *audio_buffer[NUM_PORTS];
+float *audio_buffers[NUM_PORTS];
 unsigned int audio_buffer_index;
 unsigned int buffer_length_floats;
 
@@ -26,26 +26,37 @@ bool writing = false;
  */
 int jack_process(jack_nframes_t nframes, void *arg)
 {
-  unsigned int i, j;
+  unsigned int port, frame;
+  float *current_buffer;
   jack_default_audio_sample_t *in; /* float pointer */
-	
-  /* if the port isn't registered */
-  if (ports[0] == NULL) {
+
+  /* Unless writing... */
+  if (writing) {
     return 0;
   }
 
-  /* Write the data to the corresponding buffer for every port, unless currently
-     writing the buffer. */
-  if (!writing) {
-    for (i = 0; i < NUM_PORTS; i++) {
-      in = jack_port_get_buffer(ports[i], nframes);
+  /* ...write the data to the corresponding buffer for every port. */
+  for (port = 0; port < NUM_PORTS; port++) {
+    /* if the port isn't registered */
+    if (ports[port] == NULL) {
+      break;
+    }
 
-      for (j = 0; j < nframes; j++) {
-        audio_buffer[i][audio_buffer_index] = in[j];
-        audio_buffer_index += 1;
-        if (audio_buffer_index >= buffer_length_floats) {
-          audio_buffer_index = 0;
-        }
+    in = (jack_default_audio_sample_t *)
+      jack_port_get_buffer(ports[port], nframes);
+
+    if (!in) {
+      fprintf(stderr, "bad buffer!\n");
+      break;
+	}
+
+    current_buffer = audio_buffers[port];
+
+    for (frame = 0; frame < nframes; frame++) {
+      current_buffer[audio_buffer_index] = in[frame];
+      audio_buffer_index += 1;
+      if (audio_buffer_index >= buffer_length_floats) {
+        audio_buffer_index = 0;
       }
     }
   }
@@ -60,10 +71,10 @@ int jack_process(jack_nframes_t nframes, void *arg)
  */
 void jack_shutdown(void *arg)
 {
-  unsigned int i;
+  unsigned int port;
 
-  for (i = 0; i < NUM_PORTS; i++) {
-    free(audio_buffer[i]);    
+  for (port = 0; port < NUM_PORTS; port++) {
+    free(audio_buffers[port]);
   }
 
   exit(EXIT_FAILURE);
@@ -136,7 +147,7 @@ int main(int argc, char *argv[])
                                   JackPortIsInput, 0);
 
     if (ports[i] == NULL) {
-      fprintf(stderr, "no more JACK ports available\n");
+      fprintf(stderr, "could not register JACK port\n");
       exit(EXIT_FAILURE);
     }
   }
@@ -149,7 +160,7 @@ int main(int argc, char *argv[])
   interface_loop();
   
   for (i = 0; i < NUM_PORTS; i++) {
-    free(audio_buffer[i]);    
+    free(audio_buffers[i]);
   }
 
   jack_client_close(client);

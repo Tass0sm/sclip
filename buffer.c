@@ -8,7 +8,7 @@
 
 void initialize_buffer(unsigned int buffer_length_seconds)
 {
-  unsigned int i;
+  unsigned int port;
 
   if (buffer_length_seconds < 1) {
 	fprintf(stderr, "buffer time must be greater than 1 second\n");
@@ -24,14 +24,15 @@ void initialize_buffer(unsigned int buffer_length_seconds)
      sample rate from the JACK client in global variable. */
   buffer_length_floats = buffer_length_seconds * jack_get_sample_rate(client);
 
-  for (i = 0; i < NUM_PORTS; i++) {
-    audio_buffer[i] = calloc(buffer_length_floats, sizeof(float));    
+  for (port = 0; port < NUM_PORTS; port++) {
+    audio_buffers[port] = calloc(buffer_length_floats, sizeof(float));
+    printf("%p\n", (void *) audio_buffers[port]);
   }
 }
 
 void write_buffer() {
   FILE *file;
-  unsigned int i, j;
+  unsigned int i, port;
   void *buffer_location;
 
   writing = true;
@@ -40,9 +41,9 @@ void write_buffer() {
 
   /* poor locality? */
   for (i = 0; i < buffer_length_floats; i++) {
-    for (j = 0; j < NUM_PORTS; j++) {
-      buffer_location = audio_buffer[j] + audio_buffer_index;
-      fwrite(buffer_location, sizeof(float), 1, file);
+    for (port = 0; port < 1; port++) {
+      buffer_location = audio_buffers[port] + audio_buffer_index;
+      fwrite(buffer_location, sizeof(char), 4, file);
     }
 
     audio_buffer_index += 1;
