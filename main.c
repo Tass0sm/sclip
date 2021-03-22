@@ -26,7 +26,7 @@ bool writing = false;
  */
 int jack_process(jack_nframes_t nframes, void *arg)
 {
-  unsigned int port, frame;
+  unsigned int port, frame, previous_index;
   float *current_buffer;
   jack_default_audio_sample_t *in; /* float pointer */
 
@@ -34,6 +34,8 @@ int jack_process(jack_nframes_t nframes, void *arg)
   if (writing) {
     return 0;
   }
+
+  previous_index = audio_buffer_index;
 
   /* ...write the data to the corresponding buffer for every port. */
   for (port = 0; port < NUM_PORTS; port++) {
@@ -52,6 +54,7 @@ int jack_process(jack_nframes_t nframes, void *arg)
 
     current_buffer = audio_buffers[port];
 
+    audio_buffer_index = previous_index;
     for (frame = 0; frame < nframes; frame++) {
       current_buffer[audio_buffer_index] = in[frame];
       audio_buffer_index += 1;

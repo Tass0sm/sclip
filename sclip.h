@@ -5,7 +5,7 @@
 #define MAX_LINE 10
 #define NUM_PORTS 2
 #define PORT_NAME_LENGTH 32
-#define BUFFER_SECONDS 1
+#define BUFFER_SECONDS 30
 
 /* main */
 int jack_process(jack_nframes_t nframes, void *arg);

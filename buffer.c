@@ -41,7 +41,7 @@ void write_buffer() {
 
   /* poor locality? */
   for (i = 0; i < buffer_length_floats; i++) {
-    for (port = 0; port < 1; port++) {
+    for (port = 0; port < NUM_PORTS; port++) {
       buffer_location = audio_buffers[port] + audio_buffer_index;
       fwrite(buffer_location, sizeof(char), 4, file);
     }
