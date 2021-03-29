@@ -1,9 +1,3 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdbool.h>
-
-#include <jack/jack.h>
-
 #include "sclip.h"
 
 void initialize_buffer(unsigned int buffer_length_seconds)
@@ -26,7 +20,6 @@ void initialize_buffer(unsigned int buffer_length_seconds)
 
   for (port = 0; port < NUM_PORTS; port++) {
     audio_buffers[port] = calloc(buffer_length_floats, sizeof(float));
-    printf("%p\n", (void *) audio_buffers[port]);
   }
 }
 

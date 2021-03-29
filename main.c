@@ -1,12 +1,3 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdbool.h>
-#include <string.h>
-#include <errno.h>
-#include <unistd.h>
-
-#include <jack/jack.h>
-
 #include "sclip.h"
 
 jack_client_t *client;
@@ -14,7 +5,6 @@ jack_port_t *ports[NUM_PORTS];
 float *audio_buffers[NUM_PORTS];
 unsigned int audio_buffer_index;
 unsigned int buffer_length_floats;
-
 bool writing = false;
 
 /**
@@ -74,32 +64,7 @@ int jack_process(jack_nframes_t nframes, void *arg)
  */
 void jack_shutdown(void *arg)
 {
-  unsigned int port;
-
-  for (port = 0; port < NUM_PORTS; port++) {
-    free(audio_buffers[port]);
-  }
-
-  exit(EXIT_FAILURE);
-}
-
-void interface_loop()
-{
-  char inputBuffer[MAX_LINE];
-  ssize_t length = 1;
-
-  while (length > 0) {
-    printf("> ");
-    fflush(stdout);
-    
-    length = read(STDIN_FILENO, inputBuffer, MAX_LINE);
-
-    if (inputBuffer[0] == 'w') {
-      printf("Writing\n");
-      fflush(stdout);
-      write_buffer();
-    }
-  }
+  cleanup_and_exit();
 }
 
 int main(int argc, char *argv[])
@@ -111,6 +76,12 @@ int main(int argc, char *argv[])
 
   unsigned int i;
   char port_name[PORT_NAME_LENGTH];
+
+  struct options opt = {
+    false, false
+  };
+
+  parse_options(argc, argv, &opt);
 
   /* open a client connection to the JACK server */
   client = jack_client_open(client_name, options, &status, server_name);
@@ -160,8 +131,24 @@ int main(int argc, char *argv[])
     exit(EXIT_FAILURE);
   }
 
-  interface_loop();
-  
+  if (opt.help) {
+    print_help();
+  }
+
+  if (opt.interactive) {
+    interface_loop();
+  } else {
+    set_signal_handler();
+    sleep(-1);
+  }
+
+  cleanup_and_exit();
+}
+
+void cleanup_and_exit()
+{
+  int i;
+
   for (i = 0; i < NUM_PORTS; i++) {
     free(audio_buffers[i]);
   }

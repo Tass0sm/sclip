@@ -1,5 +1,5 @@
 TARGET = sclip
-SRC = main.c buffer.c
+SRC = main.c buffer.c interface.c
 OBJ = $(SRC:.c=.o)
 CFLAGS = -Wall -pedantic
 LDFLAGS = -ljack
